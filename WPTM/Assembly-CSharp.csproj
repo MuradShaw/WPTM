@@ -46,9 +46,11 @@
   </PropertyGroup>
   <ItemGroup>
      <Compile Include="Assets\Scripts\ddol.cs" />
+     <Compile Include="Assets\Scripts\game\gm_movementHandler.cs" />
      <Compile Include="Assets\Scripts\game\gm_timer.cs" />
      <Compile Include="Assets\Scripts\sys\sys_GameRule.cs" />
-     <Compile Include="Assets\sys_GameState.cs" />
+     <Compile Include="Assets\Scripts\sys\sys_GameState.cs" />
+     <Compile Include="Assets\st_jumpRestoration.cs" />
      <None Include="Assets\TextMesh Pro\Resources\Shaders\TMPro.cginc" />
      <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_SDF-Mobile Overlay.shader" />
      <None Include="Assets\TextMesh Pro\Resources\Shaders\TMP_Bitmap.shader" />
