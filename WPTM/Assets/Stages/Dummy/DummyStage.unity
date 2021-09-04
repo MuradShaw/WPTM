@@ -211,8 +211,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 30880705}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.29, y: 1, z: -2.583}
-  m_LocalScale: {x: 0.7235, y: 1.011236, z: 0.7235}
+  m_LocalPosition: {x: 5.29, y: 0.379, z: -2.583}
+  m_LocalScale: {x: 0.7235, y: 0.599, z: 0.7235}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 4
@@ -237,7 +237,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 30880705}
   serializedVersion: 2
-  m_Mass: 1
+  m_Mass: 0.35
   m_Drag: 0
   m_AngularDrag: 0.05
   m_UseGravity: 1
@@ -329,6 +329,39 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4db47202af085d04caf6183b0c32dd7b, type: 3}
+--- !u!1 &764235344 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -6911294339195749402, guid: 4db47202af085d04caf6183b0c32dd7b,
+    type: 3}
+  m_PrefabInstance: {fileID: 639732029}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &764235348
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764235344}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 2, y: 13.636475, z: 2.0000002}
+  m_Center: {x: -6.732062e-15, y: -0.00000094913435, z: 0.0000038146973}
+--- !u!64 &764235349
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764235344}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 4
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -4817566495549845568, guid: 4db47202af085d04caf6183b0c32dd7b, type: 3}
 --- !u!1 &957060102
 GameObject:
   m_ObjectHideFlags: 0
@@ -380,7 +413,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 103
+  field of view: 60
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -406,7 +439,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 957060102}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalPosition: {x: 0, y: 1, z: -11.48}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
