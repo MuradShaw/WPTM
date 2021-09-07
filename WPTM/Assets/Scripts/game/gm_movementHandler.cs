@@ -6,6 +6,8 @@ public class gm_movementHandler : MonoBehaviour
 {
     bool moveLeft;
     bool moveRight;
+    bool walkLeft;
+    bool walkRight;
     bool jumping;
     bool activeJumping;
     bool shortHop;
@@ -16,6 +18,7 @@ public class gm_movementHandler : MonoBehaviour
 
     //Character stats
     float maxSpeed;
+    float walkSpeed;
     float runTimeZeroToMax; //accel
     float runTimeMaxToZero; //dccel
     float accel;
@@ -34,15 +37,23 @@ public class gm_movementHandler : MonoBehaviour
     float jumpTimeZeroToMax; //jcell
     float jccel;
 
+    bool stopJumping;
     bool doubleJump;
+    bool stopActing;
     int neg;
 
+    public pl_wallDetection wallDetection;
     Rigidbody rb; 
 
     /*public void OnCollisionEnter(Collider other)
     {
         //if(other.tag == "JumpRestoration" && jumps < defaultJumps) restoreJumps();
     } */
+
+    public bool onGround()
+    {
+        return isGrounded;
+    }
 
     void Start()
     {
@@ -53,10 +64,11 @@ public class gm_movementHandler : MonoBehaviour
 
         doubleJump = false;
 
-        maxSpeed = 20f;
+        maxSpeed = 14.6f;
         airDrift = 2.5f;
         fullhopMax = 15f;
         shorthopMax = 9.5f;
+        walkSpeed = 0.65f;
         jumpTimeZeroToMax = 0.2f;
         runTimeZeroToMax = 0.2f;
         runTimeMaxToZero = 0.3f;
@@ -86,17 +98,34 @@ public class gm_movementHandler : MonoBehaviour
             moveLeft = true;
         if(Input.GetKey(KeyCode.D))
             moveRight = true;
-        //if(Input.GetKeyDown(KeyCode.Space) || Input.GetKey(KeyCode.M) && jumping == true) 
-        //    doubleJump = true;
-        if(Input.GetKey(KeyCode.Space))
+        if(Input.GetKey(KeyCode.LeftArrow))
+            walkLeft = true;
+        if(Input.GetKey(KeyCode.RightArrow))
+            walkRight = true;
+        if(Input.GetKeyDown(KeyCode.Space))
             jumping = true;
         if(Input.GetKey(KeyCode.M))
             shortHop = true;
 
+        if(stopJumping)
+        {
+            jumpVelocity = 0.0f; //my physics teacher would be proud
+            
+            jumps--;
+            jumping = false;
+            shortHop = false;
+
+            stopJumping = false;
+        }
+        
         if(moveLeft && !Input.GetKey(KeyCode.A))
             moveLeft = false;
         if(moveRight && !Input.GetKey(KeyCode.D))
             moveRight = false;
+         if(walkLeft && !Input.GetKey(KeyCode.LeftArrow))
+            walkLeft = false;
+        if(walkRight && !Input.GetKey(KeyCode.RightArrow))
+            walkRight = false;
     }
     
     void FixedUpdate()
@@ -105,19 +134,18 @@ public class gm_movementHandler : MonoBehaviour
         isGrounded = groundCheck();
         jumps = (groundCheck()) ? defaultJumps : jumps;
 
-        if(moveRight) neg = -1; else if(moveLeft) neg = 1;
+        if(moveRight || walkRight) neg = -1; else if(moveLeft || walkLeft) neg = 1;
 
         bool wallShinanigans = wallCheck(Vector3.left * neg);
 
-        Debug.Log(wallShinanigans);
-
-        if((moveLeft || moveRight) && !wallShinanigans)
-            accelerate(((!isGrounded) ? airAccel : accel), maxSpeed, false, neg);
+        if((moveLeft || moveRight || walkLeft || walkRight) && !wallShinanigans)
+            accelerate(((!isGrounded) ? airAccel : accel), ((walkRight || walkLeft) ? maxSpeed * walkSpeed : maxSpeed), false, neg);
         else
             accelerate(((!isGrounded) ? airDccel : dccel), maxSpeed, true, neg);
         
         //Double check to avoid rocket launching into a wall and ruining the dinner
-        if(wallShinanigans) accelerate(dccel*5, maxSpeed, true, neg);
+        int doubleNeg = (neg > 0) ? -1 : 1;
+        if(wallShinanigans) accelerate(accel * 0, maxSpeed, true, doubleNeg);
 
         updateGravity();
 
@@ -149,18 +177,14 @@ public class gm_movementHandler : MonoBehaviour
     //for all of your short and full hopping needs
     void jump(bool shorthop = false)
     {
-        if(isGrounded) accelerate(dccel * 3f, maxSpeed, true, neg);
+        if(isGrounded) accelerate(dccel * 4.3f, maxSpeed, true, neg);
 
         jccel = ((shorthop) ? shorthopMax : fullhopMax) / jumpTimeZeroToMax; //Calculate jump accel using short/full hop values
 
         //Clean up the mess
         if(jumpVelocity >= (((shorthop) ? shorthopMax : fullhopMax)))
         {
-            jumpVelocity = 0.0f; //my physics teacher would be proud
-            
-            jumps--;
-            jumping = false;
-            shortHop = false;
+            stopJumping = true;
         }
 
         //preform the jump!! 
@@ -177,10 +201,11 @@ public class gm_movementHandler : MonoBehaviour
         rb.AddForce(gravity, ForceMode.Acceleration);
     }
 
-    //are we grounded?
+    //are we grounded?1
     bool groundCheck()
     {
         RaycastHit hit;
+
 	    float distance = 0.7f;
 	    Vector3 dir = new Vector3(0, -1);
 
@@ -192,9 +217,16 @@ public class gm_movementHandler : MonoBehaviour
     bool wallCheck(Vector3 dir)
     {
         RaycastHit hit;
-	    float distance = 0.7f;
+        RaycastHit hit2;
+        RaycastHit hit3;
+        RaycastHit hit4;
+        RaycastHit hit5;
+	    float distance = 0.4f;
+        //float thickness = 1.0f;
 
-        //See if we're grounded via raycast
-	    return(Physics.Raycast(transform.position, dir, out hit, distance));
+        //See if we're pinned via raycast
+	    return(Physics.Raycast(transform.position, dir, out hit, distance) || Physics.Raycast(transform.position + new Vector3(0, -0.5f, 0), dir, out hit2, distance) || Physics.Raycast(transform.position + new Vector3(0, 0.5f, 0), dir, out hit3, distance) || Physics.Raycast(transform.position + new Vector3(0, 1.0f, 0), dir, out hit4, distance) || Physics.Raycast(transform.position + new Vector3(0, -1.0f, 0), dir, out hit5, distance));
+
+        //return (Physics.SphereCast(transform.position + new Vector3(distance, 0, 0), thickness, dir, out hit)); 
     }
 }

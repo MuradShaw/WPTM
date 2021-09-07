@@ -5,6 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - JumpRestoration
+  - Stage
+  - Blastzone
+  - Ignore
   layers:
   - Default
   - TransparentFX
