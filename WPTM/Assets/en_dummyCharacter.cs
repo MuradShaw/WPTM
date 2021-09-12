@@ -16,6 +16,7 @@ public class en_dummyCharacter : MonoBehaviour
 
     public void OnTriggerEnter(Collider other)
     {
+        //oopsie woopsie
         if(other.gameObject.tag == "Blastzone" && !inBlastzone)
         {
             inBlastzone = true;
@@ -38,6 +39,27 @@ public class en_dummyCharacter : MonoBehaviour
         Debug.Log("Stock taken. Current stock count: " + stocks);
     }
 
+    //For allowing the player to move, this is called in animation data
+    public void updateMoveStatus(bool status)
+    {
+        inMove = status;
+
+        mh.updateMovementStatus(inMove);
+    }
+
+    //Parameters aren't allowed in animation triggers soooo
+    public void animationTrigger_updateMoveStatus()
+    {
+        bm.resetPackageData();
+        updateMoveStatus(false);
+    }
+
+    //for stopping the player from moving while attacking and ruining the dinner
+    public bool areWeInMove()
+    {
+        return inMove;
+    }
+
     void resetPlayerState()
     {
         percent = 0.0f;
@@ -45,34 +67,74 @@ public class en_dummyCharacter : MonoBehaviour
 
     void Start()
     {
-        inBlastzone = false;
-        inMove = false;
-
         mh = GetComponent<gm_movementHandler>();
         bm = GetComponent<pl_buttonManager>();
+
+        inBlastzone = false;
+        updateMoveStatus(false);
     }
 
     void Update()
     {
-        if(inMove) return;
+        Debug.Log(areWeInMove());
+
+        if(areWeInMove()) return;
         
+        //something came in the mail today
         if(bm.awaitingPackage())
         {
+            if(bm.attackIdentity() >= 4.1f)
+            {
+                airdodge(bm.attackIdentity());
+
+                return;
+            }
+
+            //what is it?
             switch(bm.attackIdentity())
             {
-                case 1:
-                    atk_jab();
+                case 1.1f: //jab data
+                    atk_jab(); 
+                    break;
+                case 2.5f:
+                    special_a(); 
                     break;
             }
+
+            bm.resetPackageData();
         }
+    }
+
+    /* Airdodges */
+    void airdodge(float dir)
+    {
+        if(mh.onGround()) return;
+        if(areWeInMove()) return; else updateMoveStatus(true);
+
+        GetComponent<Animator>().Play("dummy_airdodge");
+        mh.airDodge(dir);
     }
 
     /* Grounded Normals */
     
     void atk_jab()
     {
-        inMove = true;
+        //ruining dinners and all blah blah
+        if(areWeInMove()) return; else updateMoveStatus(true);
 
-        Debug.Log("JABBING");
+        Debug.Log("JABBING"); //WHOOOOOOOOOO
+
+        updateMoveStatus(false);
+    }
+
+    /* Specials */
+
+    void special_a()
+    {
+        if(areWeInMove()) return; else updateMoveStatus(true);
+
+        Debug.Log("SPECIALS"); //WHOOOOOOOOOO
+
+        updateMoveStatus(false);
     }
 }

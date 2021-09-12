@@ -12,12 +12,18 @@ public class gm_movementHandler : MonoBehaviour
     bool activeJumping;
     bool shortHop;
     bool run;
+    bool launching;
+    float airdodge;
     bool isGrounded;
+    bool stuckInMove;
     int jumps;
     int defaultJumps;
 
     //Character stats
     float maxSpeed;
+    float launchSpeed;
+    float launchAcceleration;
+    float launchZeroToMax;
     float walkSpeed;
     float runTimeZeroToMax; //accel
     float runTimeMaxToZero; //dccel
@@ -27,6 +33,8 @@ public class gm_movementHandler : MonoBehaviour
     float airAccel; //Air accel
     float airDccel;
     float airDrift; //Max air speed
+    float wavedashInf;
+    float weight;
 
     float leftVelocity;
     float rightVelocity;
@@ -42,13 +50,43 @@ public class gm_movementHandler : MonoBehaviour
     bool stopActing;
     int neg;
 
+    public bool player2;
     public pl_wallDetection wallDetection;
     Rigidbody rb; 
+    //List<GameObject> hitboxes;
 
-    /*public void OnCollisionEnter(Collider other)
+    //public void OnTriggerEnter(Collider other)
+    //{
+    //    
+    //}
+
+    //For all of your player launching needs
+    public void launchPlayer(Vector3 direction, float baseKnockback, int neg)
     {
-        //if(other.tag == "JumpRestoration" && jumps < defaultJumps) restoreJumps();
-    } */
+        if(launching) return; else launching = true;
+
+        Debug.Log("launching");
+        
+        float percent = 15;
+        launchSpeed = (15 * (percent/10) - (weight * 0.1f)) + baseKnockback;
+        launchZeroToMax = 0.35f;
+
+        launchAcceleration = launchSpeed / launchZeroToMax;
+        
+        multidimensionalAcceleration(direction, accel, maxSpeed, false, neg);
+    }
+
+    //to avoid moving while attacking and ruining the dinner
+    public void updateMovementStatus(bool welldontkeepmewaiting)
+    {
+        stuckInMove = welldontkeepmewaiting;
+    }
+
+    //it's time to stop honey okay
+    public void resetAirdodge()
+    {
+        airdodge = 0.0f;
+    }
 
     public bool onGround()
     {
@@ -61,6 +99,7 @@ public class gm_movementHandler : MonoBehaviour
         moveRight = false;
         activeJumping = false;
         run = false;
+        launching = false;
 
         doubleJump = false;
 
@@ -72,7 +111,11 @@ public class gm_movementHandler : MonoBehaviour
         jumpTimeZeroToMax = 0.2f;
         runTimeZeroToMax = 0.2f;
         runTimeMaxToZero = 0.3f;
-
+        wavedashInf = 0.75f;
+        weight = 75.0f;
+        launchSpeed = 1.0f;
+        launchZeroToMax = 1.0f;
+        
         accel = maxSpeed / runTimeZeroToMax;
         dccel = -maxSpeed / runTimeMaxToZero;
         airAccel = airDrift / runTimeZeroToMax;
@@ -90,10 +133,14 @@ public class gm_movementHandler : MonoBehaviour
 
         rb = GetComponent<Rigidbody>();
         rb.useGravity = false;
+
+        launchPlayer(new Vector3(1f, 1f, 0), 5, 1);
     }
 
     void Update()
     {
+        if(player2) return;
+
         if(Input.GetKey(KeyCode.A))
             moveLeft = true;
         if(Input.GetKey(KeyCode.D))
@@ -130,6 +177,12 @@ public class gm_movementHandler : MonoBehaviour
     
     void FixedUpdate()
     {
+        updateGravity();
+
+        if(airdodge > 0.0f) airDodge(airdodge);
+
+        if(stuckInMove) return;
+        
         //are we grounded type check
         isGrounded = groundCheck();
         jumps = (groundCheck()) ? defaultJumps : jumps;
@@ -147,8 +200,6 @@ public class gm_movementHandler : MonoBehaviour
         int doubleNeg = (neg > 0) ? -1 : 1;
         if(wallShinanigans) accelerate(accel * 0, maxSpeed, true, doubleNeg);
 
-        updateGravity();
-
         if((jumping || shortHop) && jumps > 0)
             jump(shortHop);
     }
@@ -156,8 +207,6 @@ public class gm_movementHandler : MonoBehaviour
     //for all your movement wants and needs
     void accelerate(float a, float max, bool d, int n)
     {
-        //Debug.Log("Airborne accel: " + isGrounded);
-
         if(!d) //Accelerating
         {
             leftVelocity += a * Time.deltaTime;
@@ -171,6 +220,27 @@ public class gm_movementHandler : MonoBehaviour
             leftVelocity = Mathf.Max(leftVelocity, 0);
 
             rb.velocity = Vector3.left * leftVelocity * n; 
+        }
+    }
+
+    //For knockback and Melee! Melee! Melee!
+    void multidimensionalAcceleration(Vector3 direction, float a, float max, bool d, int n)
+    {
+        float velocity = 0;
+
+        if(!d) //Accelerating
+        {
+            velocity += a * Time.deltaTime;
+            velocity = Mathf.Min(velocity, max); //are we max speed?
+
+            rb.velocity = direction * velocity * n; 
+        }
+        else //Deccelerating (from lack of schmovement)
+        {
+            velocity += a * Time.deltaTime;
+            velocity = Mathf.Max(velocity, 0);
+
+            rb.velocity = direction * velocity * n; 
         }
     }
 
@@ -194,6 +264,20 @@ public class gm_movementHandler : MonoBehaviour
         isGrounded = false;
     }
 
+    //melee! melee! melee!
+    public void airDodge(float dir)
+    {
+        airdodge = dir;
+        stopJumping = true;
+
+        Debug.Log("Airdodge");
+
+        if(dir == 4.3f)
+            multidimensionalAcceleration(new Vector3(8.5f, -1.0f, 0), accel, maxSpeed, false, 1);
+        else if(dir == 4.1f)
+            multidimensionalAcceleration(new Vector3(8.5f, -1.0f, 0), accel, maxSpeed, false, -1);
+    }
+
     //updating individual gravity for characters
     void updateGravity()
     {
@@ -201,7 +285,7 @@ public class gm_movementHandler : MonoBehaviour
         rb.AddForce(gravity, ForceMode.Acceleration);
     }
 
-    //are we grounded?1
+    //are we grounded?
     bool groundCheck()
     {
         RaycastHit hit;
