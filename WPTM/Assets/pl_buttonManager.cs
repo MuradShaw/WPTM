@@ -21,6 +21,8 @@ public class pl_buttonManager : MonoBehaviour
 
     bool package;
     float identification; 
+
+    gm_movementHandler mh;
     
     /* 
         Attack ID's:
@@ -74,6 +76,8 @@ public class pl_buttonManager : MonoBehaviour
         upButton = false;
         dodge = false;
         dodgeR = false;
+
+        mh = GetComponent<gm_movementHandler>();
     }
 
     void Update()
@@ -99,11 +103,11 @@ public class pl_buttonManager : MonoBehaviour
         if(Input.GetKey(KeyCode.G))
             dodgeR = true;
         
-        if(dodge)
+        if(dodge && !mh.onGround())
         {
             identification = 4.3f;
         }
-        else if(dodgeR)
+        else if(dodgeR && !mh.onGround())
         {
             identification = 4.1f;
         }

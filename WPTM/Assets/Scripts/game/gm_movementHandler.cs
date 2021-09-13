@@ -53,12 +53,21 @@ public class gm_movementHandler : MonoBehaviour
     public bool player2;
     public pl_wallDetection wallDetection;
     Rigidbody rb; 
+
+    bool blahblahblah;
     //List<GameObject> hitboxes;
 
-    //public void OnTriggerEnter(Collider other)
-    //{
-    //    
-    //}
+    public void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.layer == 8 && !isGrounded) // One way platform
+            Physics.IgnoreLayerCollision(0, 8); //Ignore collision
+    }
+
+    public void OnTriggerExit(Collider other)
+    {
+        if(other.gameObject.layer == 8) // On top of one way platform now, or at least away from it
+            Physics.IgnoreLayerCollision(0, 8, false); //Apply collision
+    }
 
     //For all of your player launching needs
     public void launchPlayer(Vector3 direction, float baseKnockback, int neg)
@@ -134,7 +143,7 @@ public class gm_movementHandler : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         rb.useGravity = false;
 
-        launchPlayer(new Vector3(1f, 1f, 0), 5, 1);
+        //launchPlayer(new Vector3(1f, 1f, 0), 5, 1);
     }
 
     void Update()
@@ -198,7 +207,7 @@ public class gm_movementHandler : MonoBehaviour
         
         //Double check to avoid rocket launching into a wall and ruining the dinner
         int doubleNeg = (neg > 0) ? -1 : 1;
-        if(wallShinanigans) accelerate(accel * 0, maxSpeed, true, doubleNeg);
+        if(wallShinanigans) accelerate(dccel * 2, maxSpeed, true, neg);
 
         if((jumping || shortHop) && jumps > 0)
             jump(shortHop);
@@ -300,6 +309,8 @@ public class gm_movementHandler : MonoBehaviour
     //stop clipping on walls dammit
     bool wallCheck(Vector3 dir)
     {
+        return false;
+
         RaycastHit hit;
         RaycastHit hit2;
         RaycastHit hit3;
