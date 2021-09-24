@@ -13,6 +13,8 @@ public class gm_movementHandler : MonoBehaviour
     bool shortHop;
     bool run;
     bool launching;
+    bool crouch;
+    bool fastfall;
     float airdodge;
     bool isGrounded;
     bool stuckInMove;
@@ -51,22 +53,30 @@ public class gm_movementHandler : MonoBehaviour
     int neg;
 
     public bool player2;
+    public GameObject mdl;
     public pl_wallDetection wallDetection;
     Rigidbody rb; 
+    Animator anim;
 
     bool blahblahblah;
     //List<GameObject> hitboxes;
 
     public void OnTriggerEnter(Collider other)
     {
-        if(other.gameObject.layer == 8 && !isGrounded) // One way platform
+        if(other.gameObject.layer == 8) // One way platform
+        {
             Physics.IgnoreLayerCollision(0, 8); //Ignore collision
+            Debug.Log("HAAALP HAAAALP!");
+        }
     }
 
     public void OnTriggerExit(Collider other)
     {
-        if(other.gameObject.layer == 8) // On top of one way platform now, or at least away from it
+        /*if(other.gameObject.layer == 8) // On top of one way platform now, or at least away from it
+        {
             Physics.IgnoreLayerCollision(0, 8, false); //Apply collision
+            Debug.Log("stfu young man");
+        }*/
     }
 
     //For all of your player launching needs
@@ -77,7 +87,7 @@ public class gm_movementHandler : MonoBehaviour
         Debug.Log("launching");
         
         float percent = 15;
-        launchSpeed = (15 * (percent/10) - (weight * 0.1f)) + baseKnockback;
+        launchSpeed = (15 * (percent/10) - (weight * 0.1f)) + baseKnockback; //15 * (p/10) - (w * 0.1f)) + bk
         launchZeroToMax = 0.35f;
 
         launchAcceleration = launchSpeed / launchZeroToMax;
@@ -109,6 +119,8 @@ public class gm_movementHandler : MonoBehaviour
         activeJumping = false;
         run = false;
         launching = false;
+        crouch = false;
+        fastfall = false;
 
         doubleJump = false;
 
@@ -118,8 +130,8 @@ public class gm_movementHandler : MonoBehaviour
         shorthopMax = 9.5f;
         walkSpeed = 0.65f;
         jumpTimeZeroToMax = 0.2f;
-        runTimeZeroToMax = 0.2f;
-        runTimeMaxToZero = 0.3f;
+        runTimeZeroToMax = 0.1f;
+        runTimeMaxToZero = 0.1f;
         wavedashInf = 0.75f;
         weight = 75.0f;
         launchSpeed = 1.0f;
@@ -136,11 +148,12 @@ public class gm_movementHandler : MonoBehaviour
         neg = 1;
 
         isGrounded = true;
-        fallspeed = 45.0f;
+        fallspeed = 30.0f;
         defaultJumps = 1;
         jumps = defaultJumps;
 
         rb = GetComponent<Rigidbody>();
+        anim = GetComponent<Animator>();
         rb.useGravity = false;
 
         //launchPlayer(new Vector3(1f, 1f, 0), 5, 1);
@@ -162,6 +175,8 @@ public class gm_movementHandler : MonoBehaviour
             jumping = true;
         if(Input.GetKey(KeyCode.M))
             shortHop = true;
+        if(Input.GetKey(KeyCode.S))
+            crouch = true;
 
         if(stopJumping)
         {
@@ -182,12 +197,20 @@ public class gm_movementHandler : MonoBehaviour
             walkLeft = false;
         if(walkRight && !Input.GetKey(KeyCode.RightArrow))
             walkRight = false;
+        if(crouch && !Input.GetKey(KeyCode.S))
+        {
+            Physics.IgnoreLayerCollision(0, 8, false); //Apply collision to OW plats
+            crouch = false;
+        }
     }
     
     void FixedUpdate()
     {
+        Debug.Log("isGrounded: " + isGrounded);
+
         updateGravity();
 
+        if(crouch) { fallBelowPlatform(); if(!isGrounded) fastfall = true; }
         if(airdodge > 0.0f) airDodge(airdodge);
 
         if(stuckInMove) return;
@@ -195,15 +218,32 @@ public class gm_movementHandler : MonoBehaviour
         //are we grounded type check
         isGrounded = groundCheck();
         jumps = (groundCheck()) ? defaultJumps : jumps;
+        if(isGrounded) fastfall = false;
 
-        if(moveRight || walkRight) neg = -1; else if(moveLeft || walkLeft) neg = 1;
+        //For determaining player direction
+        if(moveRight || walkRight) 
+        {
+            if(neg == 1) snapModelFlip(-1);
+            neg = -1; 
+        }
+        else if(moveLeft || walkLeft) 
+        {
+            if(neg == -1) snapModelFlip(1);
+            neg = 1;
+        }
 
         bool wallShinanigans = wallCheck(Vector3.left * neg);
 
         if((moveLeft || moveRight || walkLeft || walkRight) && !wallShinanigans)
+        {
+            anim.Play("dummy_run");
             accelerate(((!isGrounded) ? airAccel : accel), ((walkRight || walkLeft) ? maxSpeed * walkSpeed : maxSpeed), false, neg);
+        }
         else
+        {
+            anim.Play("no_anim");
             accelerate(((!isGrounded) ? airDccel : dccel), maxSpeed, true, neg);
+        }
         
         //Double check to avoid rocket launching into a wall and ruining the dinner
         int doubleNeg = (neg > 0) ? -1 : 1;
@@ -211,6 +251,16 @@ public class gm_movementHandler : MonoBehaviour
 
         if((jumping || shortHop) && jumps > 0)
             jump(shortHop);
+    }
+
+    //for quickly turning the character model around because they deserve it
+    void snapModelFlip(int dir)
+    {
+        //Face left (or -90y)
+        if(dir == 1)
+            transform.eulerAngles = new Vector3(0, -90, 0);
+        else //Face right (or 90y)
+            transform.eulerAngles = new Vector3(0, 90, 0);
     }
 
     //for all your movement wants and needs
@@ -287,10 +337,29 @@ public class gm_movementHandler : MonoBehaviour
             multidimensionalAcceleration(new Vector3(8.5f, -1.0f, 0), accel, maxSpeed, false, -1);
     }
 
+    //fall from one way platform
+    void fallBelowPlatform()
+    {
+        RaycastHit hit;
+
+	    float distance = 0.7f;
+	    Vector3 dir = new Vector3(0, -1);
+
+        //See if we've struck gold (gold being a one way platform)
+	    if(Physics.Raycast(transform.position, dir, out hit, distance))
+        {
+            if(hit.transform.gameObject.layer == 8)
+                Physics.IgnoreLayerCollision(0, 8); //Ignore collision
+        }
+    }
+
     //updating individual gravity for characters
     void updateGravity()
     {
-        Vector3 gravity = -9.81f * fallspeed * Vector3.up;
+        float fastfallBuffer = 1.0f;
+        if(fastfall) fastfallBuffer = 1.75f;
+
+        Vector3 gravity = -9.81f * (fallspeed * fastfallBuffer) * Vector3.up;
         rb.AddForce(gravity, ForceMode.Acceleration);
     }
 
@@ -299,8 +368,8 @@ public class gm_movementHandler : MonoBehaviour
     {
         RaycastHit hit;
 
-	    float distance = 0.7f;
-	    Vector3 dir = new Vector3(0, -1);
+	    float distance = 2f;
+	    Vector3 dir = new Vector3(0, -1f);
 
         //See if we're grounded via raycast
 	    return(Physics.Raycast(transform.position, dir, out hit, distance));

@@ -32,6 +32,7 @@ public class pl_buttonManager : MonoBehaviour
         Dtilt / Dair: 1.4
         Utilt / Uair: 1.5
         Grab / Zair: 1.6
+        Crouch = 1.7
 
         Specials: 2.1, 2.2, 2.3, 2.4...
 
@@ -174,7 +175,7 @@ public class pl_buttonManager : MonoBehaviour
         if(!Input.GetKey(KeyCode.F))
             dodge = false;
         if(!Input.GetKey(KeyCode.G))
-            dodgeR = false;;
+            dodgeR = false;
     }
 }
 

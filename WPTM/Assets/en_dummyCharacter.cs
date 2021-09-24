@@ -12,6 +12,7 @@ public class en_dummyCharacter : MonoBehaviour
 
     gm_movementHandler mh;
     pl_buttonManager bm;
+    Animator anim;
     public Transform respawn;
 
     public void OnTriggerEnter(Collider other)
@@ -69,6 +70,7 @@ public class en_dummyCharacter : MonoBehaviour
     {
         mh = GetComponent<gm_movementHandler>();
         bm = GetComponent<pl_buttonManager>();
+        anim = GetComponent<Animator>();
 
         inBlastzone = false;
         updateMoveStatus(false);
@@ -103,6 +105,12 @@ public class en_dummyCharacter : MonoBehaviour
 
             bm.resetPackageData();
         }
+    }
+
+    public void playAnimation(int id)
+    {
+        if(id == 1)
+            anim.Play("dummy_run");
     }
 
     /* Airdodges */
