@@ -52,6 +52,7 @@
      <Compile Include="Assets\Scripts\sys\sys_GameState.cs" />
      <Compile Include="Assets\en_dummyCharacter.cs" />
      <Compile Include="Assets\gm_blastzone.cs" />
+     <Compile Include="Assets\gm_groundCheck.cs" />
      <Compile Include="Assets\pl_buttonManager.cs" />
      <Compile Include="Assets\pl_wallDetection.cs" />
      <Compile Include="Assets\st_jumpRestoration.cs" />

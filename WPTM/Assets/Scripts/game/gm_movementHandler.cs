@@ -15,9 +15,14 @@ public class gm_movementHandler : MonoBehaviour
     bool launching;
     bool crouch;
     bool fastfall;
+    int jumpsquat; //0: no jumpsquat and jump / 1: in jumpsquat / 2: jumpsquat ending, resume jump
     float airdodge;
     bool isGrounded;
     bool stuckInMove;
+    bool inInitialDash;
+    bool inDash;
+    bool endingInitialDash;
+    bool slideTurnaround;
     int jumps;
     int defaultJumps;
 
@@ -55,6 +60,7 @@ public class gm_movementHandler : MonoBehaviour
     public bool player2;
     public GameObject mdl;
     public pl_wallDetection wallDetection;
+    public gm_groundCheck ground;
     Rigidbody rb; 
     Animator anim;
 
@@ -95,6 +101,18 @@ public class gm_movementHandler : MonoBehaviour
         multidimensionalAcceleration(direction, accel, maxSpeed, false, neg);
     }
 
+    public void intialDashEnding()
+    {
+        endingInitialDash = true;
+    }
+
+    public void jumpsquatEnding()
+    {
+        Debug.Log("Freddy squat ending");
+
+        jumpsquat = 2;
+    }
+
     //to avoid moving while attacking and ruining the dinner
     public void updateMovementStatus(bool welldontkeepmewaiting)
     {
@@ -121,15 +139,18 @@ public class gm_movementHandler : MonoBehaviour
         launching = false;
         crouch = false;
         fastfall = false;
+        inInitialDash = false;
+        endingInitialDash = false;
+        inDash = false;
 
         doubleJump = false;
 
-        maxSpeed = 14.6f;
+        maxSpeed = 20.6f;
         airDrift = 2.5f;
-        fullhopMax = 15f;
+        fullhopMax = 30f;
         shorthopMax = 9.5f;
         walkSpeed = 0.65f;
-        jumpTimeZeroToMax = 0.2f;
+        jumpTimeZeroToMax = 0.1f;
         runTimeZeroToMax = 0.1f;
         runTimeMaxToZero = 0.1f;
         wavedashInf = 0.75f;
@@ -139,6 +160,7 @@ public class gm_movementHandler : MonoBehaviour
         
         accel = maxSpeed / runTimeZeroToMax;
         dccel = -maxSpeed / runTimeMaxToZero;
+        jccel = maxSpeed / jumpTimeZeroToMax;
         airAccel = airDrift / runTimeZeroToMax;
         airDccel = -airDrift / runTimeMaxToZero;
 
@@ -148,7 +170,7 @@ public class gm_movementHandler : MonoBehaviour
         neg = 1;
 
         isGrounded = true;
-        fallspeed = 30.0f;
+        fallspeed = 40.0f;
         defaultJumps = 1;
         jumps = defaultJumps;
 
@@ -178,17 +200,8 @@ public class gm_movementHandler : MonoBehaviour
         if(Input.GetKey(KeyCode.S))
             crouch = true;
 
-        if(stopJumping)
-        {
-            jumpVelocity = 0.0f; //my physics teacher would be proud
-            
-            jumps--;
-            jumping = false;
-            shortHop = false;
+        if(stopJumping) endJumpingState();
 
-            stopJumping = false;
-        }
-        
         if(moveLeft && !Input.GetKey(KeyCode.A))
             moveLeft = false;
         if(moveRight && !Input.GetKey(KeyCode.D))
@@ -216,41 +229,116 @@ public class gm_movementHandler : MonoBehaviour
         if(stuckInMove) return;
         
         //are we grounded type check
-        isGrounded = groundCheck();
-        jumps = (groundCheck()) ? defaultJumps : jumps;
+        isGrounded = ground.onGround();
+        jumps = (ground.onGround()) ? defaultJumps : jumps;
         if(isGrounded) fastfall = false;
 
-        //For determaining player direction
-        if(moveRight || walkRight) 
+        if(jumping || shortHop) 
         {
-            if(neg == 1) snapModelFlip(-1);
-            neg = -1; 
-        }
-        else if(moveLeft || walkLeft) 
-        {
-            if(neg == -1) snapModelFlip(1);
-            neg = 1;
+            if(jumps <= 0 && jumpsquat < 1)
+                return;
+
+            if(inInitialDash)
+            {
+                inDash = true;
+                inInitialDash = false;
+                endingInitialDash = false;
+            }
+
+            if(jumpsquat == 0)
+            {
+                anim.Play("dummy_jump");
+                jumpsquat = 1;
+            }
+            if(jumpsquat == 2)
+                jump(shortHop);
         }
 
-        bool wallShinanigans = wallCheck(Vector3.left * neg);
+        bool wallShinanigans = wallCheck(Vector3.left * neg); //fuck you walls
+        //bool doAnimationBullshit = (isGrounded && (jumpsquat < 1 || !jumping)); // determine if running animation should play
 
-        if((moveLeft || moveRight || walkLeft || walkRight) && !wallShinanigans)
+        //For switching player position
+        bool switchingPositionToRight = ((moveRight || walkRight) && (neg == 1));
+        bool switchingPositionToLeft = ((moveLeft || walkLeft) && (neg == -1));
+
+        if(moveLeft || moveRight || walkLeft || walkRight)
         {
-            anim.Play("dummy_run");
-            accelerate(((!isGrounded) ? airAccel : accel), ((walkRight || walkLeft) ? maxSpeed * walkSpeed : maxSpeed), false, neg);
+            //switch sides
+            if(switchingPositionToLeft || switchingPositionToRight)
+            {
+                //slide turnaround because we're dashing
+                if(inDash)
+                {
+                    anim.Play("dummy_run_slide");
+
+                    slideTurnaround = true;
+                    inDash = false;
+
+                    neg = ((switchingPositionToRight) ? -1 : 1);
+                }
+
+                if(switchingPositionToLeft)
+                {
+                    neg = 1;
+                    snapModelFlip(1);
+                }
+                else if(switchingPositionToRight)
+                {
+                    neg = -1;
+                    snapModelFlip(-1);
+                }
+            }
+
+            //to stop from moving when we're not supposed to and ruining the dinner
+            if(slideTurnaround) return;
+
+            if(!inInitialDash && !inDash)
+            {
+                inInitialDash = true;
+                anim.Play("dummy_initial_dash");
+            }
+            else if(inInitialDash)
+            {
+                if(endingInitialDash) //are we ending? start to dash
+                {
+                    inDash = true;
+                    anim.Play("dummy_run");
+
+                    inInitialDash = false;
+                    endingInitialDash = false;
+                }
+            }
         }
         else
         {
-            anim.Play("no_anim");
-            accelerate(((!isGrounded) ? airDccel : dccel), maxSpeed, true, neg);
+            if(endingInitialDash) 
+            {
+                anim.Play("no_anim");
+                accelerate(((!isGrounded) ? airDccel : dccel), maxSpeed, true, neg);
+
+                inDash = false;
+                inInitialDash = false;
+                endingInitialDash = false;
+            }
+            else if(inDash)
+            {
+                anim.Play("no_anim");
+                accelerate(((!isGrounded) ? airDccel : dccel), maxSpeed, true, neg);
+
+                inDash = false;
+                inInitialDash = false;
+                endingInitialDash = false;
+            }
         }
+
+        Debug.Log("In intial shit" + inInitialDash);
+
+        if((inInitialDash || inDash) && !wallShinanigans)
+            accelerate(((!isGrounded) ? airAccel : accel), ((walkRight || walkLeft) ? maxSpeed * walkSpeed : maxSpeed * ((inInitialDash) ? 1.25f : 1)), false, neg);
         
         //Double check to avoid rocket launching into a wall and ruining the dinner
         int doubleNeg = (neg > 0) ? -1 : 1;
         if(wallShinanigans) accelerate(dccel * 2, maxSpeed, true, neg);
-
-        if((jumping || shortHop) && jumps > 0)
-            jump(shortHop);
     }
 
     //for quickly turning the character model around because they deserve it
@@ -261,6 +349,8 @@ public class gm_movementHandler : MonoBehaviour
             transform.eulerAngles = new Vector3(0, -90, 0);
         else //Face right (or 90y)
             transform.eulerAngles = new Vector3(0, 90, 0);
+
+        Debug.Log("bigbear");
     }
 
     //for all your movement wants and needs
@@ -316,8 +406,11 @@ public class gm_movementHandler : MonoBehaviour
             stopJumping = true;
         }
 
+        Debug.Log("mmm big jumpfredbear");
+
         //preform the jump!! 
         jumpVelocity += jccel * Time.deltaTime;
+
         rb.AddForce(new Vector3(0, jumpVelocity, 0), ForceMode.Impulse); //physics!!!!
 
         isGrounded = false;
@@ -368,7 +461,7 @@ public class gm_movementHandler : MonoBehaviour
     {
         RaycastHit hit;
 
-	    float distance = 2f;
+	    float distance = 1f;
 	    Vector3 dir = new Vector3(0, -1f);
 
         //See if we're grounded via raycast
@@ -393,4 +486,32 @@ public class gm_movementHandler : MonoBehaviour
 
         //return (Physics.SphereCast(transform.position + new Vector3(distance, 0, 0), thickness, dir, out hit)); 
     }
+
+    /* //////////////////////////////////
+        Animation controlled functions:
+    ////////////////////////////////// */
+
+    public void dashTurnaroundEnding()
+    {
+        slideTurnaround = false;
+    }
+
+    public void removeJump()
+    {
+        jumps--;
+    }
+
+    public void endJumpingState()
+    {
+        Debug.Log("ending the freddy state");
+
+        jumpVelocity = 0.0f; //my physics teacher would be proud
+            
+        jumpsquat = 0; //no jump nor jumpsquat
+
+        jumping = false;
+        shortHop = false;
+        stopJumping = false;
+    }
 }
+
